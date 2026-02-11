@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ForceGraph, { type GraphData } from '@/components/graph/ForceGraph';
+import ForceGraph, { type GraphData, type GraphNode } from '@/components/graph/ForceGraph';
 
 // Initial demo data before the DB is populated
-// These represent the two hand-written wiki entries
 const SEED_GRAPH: GraphData = {
     nodes: [
         {
@@ -29,7 +28,6 @@ const SEED_GRAPH: GraphData = {
         },
     ],
     links: [
-        // Markdown and Mermaid are connected — Mermaid renders INSIDE Markdown
         {
             source: 'pkg-mermaid',
             target: 'pkg-markdown',
@@ -38,10 +36,9 @@ const SEED_GRAPH: GraphData = {
     ],
 };
 
-export default function GraphSection({ interactive = false }: { interactive?: boolean }) {
+export default function GraphSection({ interactive = false, onNodeClick }: { interactive?: boolean; onNodeClick?: (node: GraphNode) => void }) {
     const [graphData, setGraphData] = useState<GraphData>(SEED_GRAPH);
 
-    // In future: fetch live data from /api/graph
     useEffect(() => {
         fetch('/api/graph')
             .then((res) => res.json())
@@ -50,10 +47,8 @@ export default function GraphSection({ interactive = false }: { interactive?: bo
                     setGraphData(data);
                 }
             })
-            .catch(() => {
-                // Keep seed data if API fails
-            });
+            .catch(() => { });
     }, []);
 
-    return <ForceGraph data={graphData} interactive={interactive} />;
+    return <ForceGraph data={graphData} interactive={interactive} onNodeClick={onNodeClick} />;
 }

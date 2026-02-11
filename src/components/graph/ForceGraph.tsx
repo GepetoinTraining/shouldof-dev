@@ -41,11 +41,17 @@ const TAG_COLORS: Record<string, string> = {
     project: '#06b6d4',
 };
 
-export default function ForceGraph({ data, interactive = false }: { data: GraphData; interactive?: boolean }) {
+export default function ForceGraph({ data, interactive = false, onNodeClick }: { data: GraphData; interactive?: boolean; onNodeClick?: (node: GraphNode) => void }) {
     const svgRef = useRef<SVGSVGElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const simulationRef = useRef<d3.Simulation<GraphNode, GraphLink> | null>(null);
+    const interactiveRef = useRef(interactive);
+    const onNodeClickRef = useRef(onNodeClick);
+
+    // Keep refs in sync with props so D3 closures always read the latest value
+    useEffect(() => { interactiveRef.current = interactive; }, [interactive]);
+    useEffect(() => { onNodeClickRef.current = onNodeClick; }, [onNodeClick]);
 
     const getNodeColor = useCallback((node: GraphNode) => {
         if (node.type === 'project') return TAG_COLORS[node.tag || 'other'] || TAG_COLORS.other;
@@ -80,7 +86,7 @@ export default function ForceGraph({ data, interactive = false }: { data: GraphD
             .scaleExtent([0.3, 4])
             .filter((event) => {
                 // In backdrop mode, block wheel events so page scrolls normally
-                if (!interactive && event.type === 'wheel') return false;
+                if (!interactiveRef.current && event.type === 'wheel') return false;
                 return true;
             })
             .on('zoom', (event) => {
@@ -223,7 +229,9 @@ export default function ForceGraph({ data, interactive = false }: { data: GraphD
                     .attr('stroke-opacity', 0.4);
             })
             .on('click', function (_event: MouseEvent, d: GraphNode) {
-                if (d.hasWiki) {
+                if (onNodeClickRef.current) {
+                    onNodeClickRef.current(d);
+                } else if (d.hasWiki) {
                     router.push(`/wiki/${d.slug}`);
                 }
             });
