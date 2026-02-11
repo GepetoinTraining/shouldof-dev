@@ -443,12 +443,12 @@ body {
   gap: 8px;
 }
 
-.site-logo .logo-dot {
+.logo-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent-violet);
-  box-shadow: 0 0 12px var(--glow-violet);
+  background: var(--accent-green);
+  box-shadow: 0 0 12px var(--glow-green);
   animation: pulse-glow 2s infinite;
 }
 

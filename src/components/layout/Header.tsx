@@ -12,7 +12,7 @@ export default function Header() {
     return (
         <header className="site-header">
             <Link href="/" className="site-logo">
-                <span className="logo-dot" />
+                <img src="/favicon.svg" alt="" width={20} height={20} style={{ display: 'block' }} />
                 shouldof.dev
             </Link>
 

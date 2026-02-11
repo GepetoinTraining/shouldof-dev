@@ -1,7 +1,8 @@
+import { Suspense } from 'react';
 import Providers from '@/components/Providers';
 import Header from '@/components/layout/Header';
-import StoryCard from '@/components/StoryCard';
 import HeroSection from '@/components/HeroSection';
+import StoriesSection from '@/components/StoriesSection';
 
 export default function HomePage() {
   return (
@@ -20,49 +21,16 @@ export default function HomePage() {
           </blockquote>
         </section>
 
-        {/* Featured Stories */}
-        <section
-          style={{
-            padding: '64px 24px',
-            maxWidth: 900,
-            margin: '0 auto',
-          }}
+        {/* Featured Stories — dynamic from DB */}
+        <Suspense
+          fallback={
+            <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text-muted)' }}>
+              Loading stories…
+            </div>
+          }
         >
-          <h2
-            style={{
-              fontSize: 'clamp(1.3rem, 2.5vw, 2rem)',
-              fontWeight: 800,
-              textAlign: 'center',
-              marginBottom: 48,
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Stories Behind the Code
-          </h2>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-              gap: 24,
-            }}
-          >
-            <StoryCard
-              slug="markdown"
-              title="John Gruber & Aaron Swartz"
-              subtitle="Markdown (.md)"
-              excerpt="The format everything is written in. Gruber wanted readable plain text for the web. Aaron Swartz co-designed the spec at age 17."
-              accent="#f43f5e"
-            />
-            <StoryCard
-              slug="mermaid"
-              title="Knut Sveidqvist"
-              subtitle="Mermaid.js"
-              excerpt="74,000 GitHub stars. 8 million users. 3 Medium followers. He built diagrams from text — and nobody said thank you."
-              accent="#7c3aed"
-            />
-          </div>
-        </section>
+          <StoriesSection />
+        </Suspense>
       </main>
 
       {/* Footer */}
