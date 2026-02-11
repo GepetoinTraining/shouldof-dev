@@ -3,56 +3,68 @@
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { IconBrandGithub, IconFocus2, IconX, IconBook, IconSparkles } from '@tabler/icons-react';
+import { IconBrandGithub, IconFocus2, IconX, IconBook, IconSparkles, IconChevronUp, IconChevronDown } from '@tabler/icons-react';
 import GraphSection from '@/app/GraphSection';
 import type { GraphNode } from '@/components/graph/ForceGraph';
 
 export default function HeroSection() {
-    const [scrollProgress, setScrollProgress] = useState(0); // 0 = hero, 1 = graph fully revealed
+    const [scrollProgress, setScrollProgress] = useState(0);
     const [diveMode, setDiveMode] = useState(false);
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
     const [generating, setGenerating] = useState(false);
     const [genMessage, setGenMessage] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
     // Track scroll position → progress (0..1)
     useEffect(() => {
+        if (diveMode) return; // Don't track scroll when locked in dive mode
+
         const handleScroll = () => {
             const scrollY = window.scrollY;
-            const threshold = window.innerHeight * 0.6; // fully revealed after 60vh scroll
+            const threshold = window.innerHeight * 0.6;
             const progress = Math.min(scrollY / threshold, 1);
             setScrollProgress(progress);
-
-            // Auto-engage dive mode when scrolled past threshold
-            if (progress >= 1 && !diveMode) {
-                setDiveMode(true);
-            }
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, [diveMode]);
 
-    // "Explore" button → smooth scroll to reveal
+    // Lock body scroll when in dive mode
+    useEffect(() => {
+        if (diveMode) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.height = '100vh';
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.height = '';
+        };
+    }, [diveMode]);
+
+    // "Explore" button → enter dive mode with animation
     function handleExploreClick() {
-        const target = window.innerHeight * 0.65;
-        window.scrollTo({ top: target, behavior: 'smooth' });
+        setScrollProgress(1);
+        setDiveMode(true);
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }
 
-    // Exit dive → scroll back to top
+    // Exit dive → return to hero
     function exitDive() {
         setDiveMode(false);
         setSelectedNode(null);
         setGenMessage('');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setScrollProgress(0);
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
     }
 
     const handleNodeClick = useCallback((node: GraphNode) => {
-        if (!diveMode) return;
         setSelectedNode(node);
         setGenMessage('');
-    }, [diveMode]);
+    }, []);
 
     async function handleGenerate() {
         if (!selectedNode) return;
@@ -78,121 +90,131 @@ export default function HeroSection() {
         }
     }
 
-    // Derived values from scroll progress
-    const heroOpacity = 1 - scrollProgress;
-    const graphBlur = Math.max(0, 12 - scrollProgress * 12); // 12px → 0px
-    const graphBrightness = 0.3 + scrollProgress * 0.7; // 0.3 → 1.0
-    const isInteractive = diveMode || scrollProgress >= 1;
+    // Derived values
+    const heroOpacity = diveMode ? 0 : (1 - scrollProgress);
+    const graphBlur = diveMode ? 0 : Math.max(0, 12 - scrollProgress * 12);
+    const graphBrightness = diveMode ? 1 : (0.3 + scrollProgress * 0.7);
+    const isInteractive = diveMode;
 
     return (
-        <div ref={containerRef}>
-            {/* Scroll spacer — creates the scrollable area for the reveal */}
-            <div style={{ height: '160vh', position: 'relative' }}>
+        <>
+            {/* Scroll spacer — only visible when NOT in dive mode */}
+            {!diveMode && <div style={{ height: '160vh' }} />}
 
-                {/* Graph layer — fixed, behind hero, starts blurred */}
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        zIndex: 1,
-                        filter: `blur(${graphBlur}px) brightness(${graphBrightness})`,
-                        transition: diveMode ? 'filter 0.6s ease' : 'none',
-                    }}
+            {/* Graph layer — fixed, behind hero, starts blurred */}
+            <div
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 1,
+                    filter: `blur(${graphBlur}px) brightness(${graphBrightness})`,
+                    transition: 'filter 0.6s ease',
+                }}
+            >
+                <Suspense
+                    fallback={
+                        <div style={{
+                            width: '100%', height: '100vh',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'var(--bg-deep)',
+                        }}>
+                            <div className="logo-dot" style={{ width: 16, height: 16 }} />
+                        </div>
+                    }
                 >
-                    <Suspense
-                        fallback={
-                            <div
-                                style={{
-                                    width: '100%',
-                                    height: '100vh',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: 'var(--bg-deep)',
-                                }}
-                            >
-                                <div className="logo-dot" style={{ width: 16, height: 16 }} />
-                            </div>
-                        }
+                    <GraphSection interactive={isInteractive} onNodeClick={isInteractive ? handleNodeClick : undefined} />
+                </Suspense>
+            </div>
+
+            {/* Hero overlay — fixed, fades as you scroll or when dive mode */}
+            <div
+                className="hero-overlay"
+                style={{
+                    position: 'fixed',
+                    zIndex: 10,
+                    opacity: heroOpacity,
+                    pointerEvents: heroOpacity < 0.1 ? 'none' : 'auto',
+                    transition: 'opacity 0.5s ease',
+                }}
+            >
+                <h1 className="hero-tagline">Every npm install is a person.</h1>
+                <p className="hero-subtitle">
+                    See the humans behind your code. Connect your project. Watch the web of
+                    gratitude grow.
+                </p>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Link href="/connect" className="hero-cta">
+                        <IconBrandGithub size={20} />
+                        Connect Your GitHub
+                    </Link>
+                    <button
+                        onClick={handleExploreClick}
+                        className="hero-cta"
+                        style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(124, 58, 237, 0.3)',
+                        }}
                     >
-                        <GraphSection interactive={isInteractive} onNodeClick={isInteractive ? handleNodeClick : undefined} />
-                    </Suspense>
+                        <IconFocus2 size={20} />
+                        Explore the Graph
+                    </button>
                 </div>
 
-                {/* Hero overlay — fixed, fades as you scroll */}
-                <div
-                    className="hero-overlay"
-                    style={{
-                        position: 'fixed',
-                        zIndex: 10,
-                        opacity: heroOpacity,
-                        pointerEvents: heroOpacity < 0.1 ? 'none' : 'auto',
-                        transition: diveMode ? 'opacity 0.5s ease' : 'none',
-                    }}
-                >
-                    <h1 className="hero-tagline">Every npm install is a person.</h1>
-                    <p className="hero-subtitle">
-                        See the humans behind your code. Connect your project. Watch the web of
-                        gratitude grow.
-                    </p>
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Link href="/connect" className="hero-cta">
-                            <IconBrandGithub size={20} />
-                            Connect Your GitHub
-                        </Link>
-                        <button
-                            onClick={handleExploreClick}
-                            className="hero-cta"
-                            style={{
-                                background: 'rgba(255,255,255,0.06)',
-                                border: '1px solid rgba(124, 58, 237, 0.3)',
-                            }}
-                        >
-                            <IconFocus2 size={20} />
-                            Explore the Graph
-                        </button>
-                    </div>
-                </div>
-
-                {/* Stats bar — fixed bottom, fades with hero */}
-                <div
-                    className="stats-bar"
-                    style={{
-                        position: 'fixed',
-                        opacity: heroOpacity,
-                        pointerEvents: heroOpacity < 0.1 ? 'none' : 'auto',
-                        transition: diveMode ? 'opacity 0.4s ease' : 'none',
-                    }}
-                >
-                    <div className="stat-item">
-                        <div className="stat-value">2</div>
-                        <div className="stat-label">Stories</div>
-                    </div>
-                    <div className="stat-item">
-                        <div className="stat-value">0</div>
-                        <div className="stat-label">Projects</div>
-                    </div>
-                    <div className="stat-item">
-                        <div className="stat-value">0</div>
-                        <div className="stat-label">Thank Yous</div>
-                    </div>
+                {/* Scroll hint */}
+                <div style={{
+                    position: 'absolute',
+                    bottom: 100,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 4,
+                    opacity: 0.4,
+                    animation: 'float 2s ease-in-out infinite',
+                }}>
+                    <IconChevronDown size={20} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>scroll to explore</span>
                 </div>
             </div>
 
-            {/* Node Action Panel — appears when a node is clicked in dive mode */}
+            {/* Stats bar — fades with hero */}
+            <div
+                className="stats-bar"
+                style={{
+                    position: 'fixed',
+                    opacity: heroOpacity,
+                    pointerEvents: heroOpacity < 0.1 ? 'none' : 'auto',
+                    transition: 'opacity 0.4s ease',
+                }}
+            >
+                <div className="stat-item">
+                    <div className="stat-value">2</div>
+                    <div className="stat-label">Stories</div>
+                </div>
+                <div className="stat-item">
+                    <div className="stat-value">0</div>
+                    <div className="stat-label">Projects</div>
+                </div>
+                <div className="stat-item">
+                    <div className="stat-value">0</div>
+                    <div className="stat-label">Thank Yous</div>
+                </div>
+            </div>
+
+            {/* ─── DIVE MODE UI ─────────────────────────────────── */}
+
+            {/* Node Action Panel */}
             {diveMode && selectedNode && (
                 <div
                     style={{
                         position: 'fixed',
-                        top: 80,
-                        right: 24,
-                        width: 280,
+                        top: 80, right: 24, width: 280,
                         padding: '20px',
                         background: 'rgba(5, 5, 20, 0.92)',
                         backdropFilter: 'blur(16px)',
                         border: '1px solid rgba(124, 58, 237, 0.25)',
-                        borderRadius: 14,
-                        zIndex: 30,
+                        borderRadius: 14, zIndex: 30,
                         animation: 'fadeIn 0.3s ease',
                     }}
                 >
@@ -271,28 +293,24 @@ export default function HeroSection() {
                 </div>
             )}
 
-            {/* Dive Mode Controls — fixed bottom */}
+            {/* Dive Mode Bottom Bar */}
             {diveMode && (
                 <div
                     style={{
                         position: 'fixed',
-                        bottom: 32,
-                        left: '50%',
+                        bottom: 32, left: '50%',
                         transform: 'translateX(-50%)',
-                        display: 'flex',
-                        gap: 12,
-                        alignItems: 'center',
+                        display: 'flex', gap: 12, alignItems: 'center',
                         padding: '12px 20px',
                         background: 'rgba(5, 5, 20, 0.85)',
                         backdropFilter: 'blur(12px)',
                         border: '1px solid rgba(124, 58, 237, 0.2)',
-                        borderRadius: 12,
-                        zIndex: 30,
+                        borderRadius: 12, zIndex: 30,
                         animation: 'fadeIn 0.4s ease',
                     }}
                 >
                     <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                        🔍 Scroll to zoom · Drag to pan · Click a node for its story
+                        🔍 Scroll to zoom · Drag to pan · Click a node
                     </span>
                     <button
                         onClick={exitDive}
@@ -310,6 +328,73 @@ export default function HeroSection() {
                     </button>
                 </div>
             )}
-        </div>
+
+            {/* Section Navigation Arrows — always visible */}
+            {!diveMode && (
+                <div style={{
+                    position: 'fixed',
+                    right: 24,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
+                    zIndex: 20,
+                }}>
+                    <button
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        title="Back to top"
+                        style={{
+                            width: 40, height: 40,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(5, 5, 20, 0.7)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(124, 58, 237, 0.15)',
+                            borderRadius: 10, color: 'var(--text-muted)',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                    >
+                        <IconChevronUp size={18} />
+                    </button>
+                    <button
+                        onClick={handleExploreClick}
+                        title="Dive into graph"
+                        style={{
+                            width: 40, height: 40,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(5, 5, 20, 0.7)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(124, 58, 237, 0.15)',
+                            borderRadius: 10, color: 'var(--text-muted)',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                        }}
+                    >
+                        <IconChevronDown size={18} />
+                    </button>
+                </div>
+            )}
+
+            {/* Back to Top arrow in dive mode */}
+            {diveMode && (
+                <button
+                    onClick={exitDive}
+                    title="Back to hero"
+                    style={{
+                        position: 'fixed',
+                        right: 24, top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 40, height: 40,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(5, 5, 20, 0.7)',
+                        backdropFilter: 'blur(8px)',
+                        border: '1px solid rgba(124, 58, 237, 0.15)',
+                        borderRadius: 10, color: 'var(--text-muted)',
+                        cursor: 'pointer', zIndex: 30,
+                    }}
+                >
+                    <IconChevronUp size={18} />
+                </button>
+            )}
+        </>
     );
 }

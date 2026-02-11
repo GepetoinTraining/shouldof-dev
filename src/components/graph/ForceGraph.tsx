@@ -167,11 +167,24 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
             .style('font-size', (d) => d.type === 'project' ? '13px' : '11px')
             .style('font-weight', (d) => d.type === 'project' ? '700' : '500')
             .attr('dy', (d) => getNodeRadius(d) + 14)
+            .style('user-select', 'none')
+            .style('-webkit-user-select', 'none')
+            .style('pointer-events', 'auto')
+            .style('cursor', 'pointer')
             .style('opacity', 0)
             .transition()
             .duration(800)
             .delay((_d, i) => i * 30 + 400)
             .style('opacity', 1);
+
+        // Invisible hit areas — bigger click targets around each node
+        const hitArea = g.append('g')
+            .selectAll<SVGCircleElement, GraphNode>('circle')
+            .data(nodes)
+            .join('circle')
+            .attr('r', (d) => getNodeRadius(d) + 8)
+            .attr('fill', 'transparent')
+            .style('cursor', 'pointer');
 
         // Tooltip & interaction
         const nodeSelection = g.selectAll<SVGCircleElement, GraphNode>('circle');
@@ -227,6 +240,50 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
                 link
                     .classed('highlighted', false)
                     .attr('stroke-opacity', 0.4);
+            })
+            .on('click', function (_event: MouseEvent, d: GraphNode) {
+                if (onNodeClickRef.current) {
+                    onNodeClickRef.current(d);
+                } else if (d.hasWiki) {
+                    router.push(`/wiki/${d.slug}`);
+                }
+            });
+
+        // Labels also trigger click
+        const labelSelection = g.selectAll<SVGTextElement, GraphNode>('text');
+        labelSelection
+            .on('click', function (_event: MouseEvent, d: GraphNode) {
+                if (onNodeClickRef.current) {
+                    onNodeClickRef.current(d);
+                } else if (d.hasWiki) {
+                    router.push(`/wiki/${d.slug}`);
+                }
+            });
+
+        // Hit areas trigger same events
+        hitArea
+            .on('mouseover', function (_event: MouseEvent, d: GraphNode) {
+                // Find corresponding circle and enlarge it
+                node.filter((n: GraphNode) => n.id === d.id)
+                    .transition().duration(150)
+                    .attr('r', getNodeRadius(d) * 1.3);
+                link
+                    .classed('highlighted', (l) => {
+                        const src = typeof l.source === 'object' ? l.source.id : l.source;
+                        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+                        return src === d.id || tgt === d.id;
+                    })
+                    .attr('stroke-opacity', (l) => {
+                        const src = typeof l.source === 'object' ? l.source.id : l.source;
+                        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+                        return (src === d.id || tgt === d.id) ? 0.8 : 0.15;
+                    });
+            })
+            .on('mouseout', function (_event: MouseEvent, d: GraphNode) {
+                node.filter((n: GraphNode) => n.id === d.id)
+                    .transition().duration(150)
+                    .attr('r', getNodeRadius(d));
+                link.classed('highlighted', false).attr('stroke-opacity', 0.4);
             })
             .on('click', function (_event: MouseEvent, d: GraphNode) {
                 if (onNodeClickRef.current) {
