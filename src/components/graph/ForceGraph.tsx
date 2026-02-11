@@ -41,7 +41,7 @@ const TAG_COLORS: Record<string, string> = {
     project: '#06b6d4',
 };
 
-export default function ForceGraph({ data }: { data: GraphData }) {
+export default function ForceGraph({ data, interactive = false }: { data: GraphData; interactive?: boolean }) {
     const svgRef = useRef<SVGSVGElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
@@ -75,13 +75,12 @@ export default function ForceGraph({ data }: { data: GraphData }) {
         // Create a group for zoom/pan
         const g = svg.append('g');
 
-        // Zoom behavior — disable wheel zoom so page scrolls normally
-        // Graph is a backdrop; only drag-pan is allowed
+        // Zoom behavior — interactive mode enables full zoom, backdrop mode blocks scroll
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.3, 4])
             .filter((event) => {
-                // Block wheel events (scroll) from triggering zoom
-                if (event.type === 'wheel') return false;
+                // In backdrop mode, block wheel events so page scrolls normally
+                if (!interactive && event.type === 'wheel') return false;
                 return true;
             })
             .on('zoom', (event) => {
@@ -293,7 +292,7 @@ export default function ForceGraph({ data }: { data: GraphData }) {
     }, []);
 
     return (
-        <div className="graph-container" style={{ pointerEvents: 'none' }}>
+        <div className="graph-container" style={{ pointerEvents: interactive ? 'auto' : 'none' }}>
             <svg ref={svgRef} style={{ pointerEvents: 'auto' }} />
             <div ref={tooltipRef} className="graph-tooltip" />
         </div>

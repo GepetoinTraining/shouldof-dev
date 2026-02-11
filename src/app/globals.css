@@ -458,6 +458,11 @@ html, body {
   50% { box-shadow: 0 0 20px var(--glow-violet), 0 0 40px rgba(124, 58, 237, 0.1); }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 .nav-links {
   display: flex;
   align-items: center;

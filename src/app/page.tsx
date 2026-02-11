@@ -1,10 +1,7 @@
-import { Suspense } from 'react';
-import Link from 'next/link';
-import { IconBrandGithub } from '@tabler/icons-react';
 import Providers from '@/components/Providers';
 import Header from '@/components/layout/Header';
 import StoryCard from '@/components/StoryCard';
-import GraphSection from './GraphSection';
+import HeroSection from '@/components/HeroSection';
 
 export default function HomePage() {
   return (
@@ -12,58 +9,8 @@ export default function HomePage() {
       <Header />
 
       <main style={{ position: 'relative' }}>
-        {/* Hero: Graph + Overlay */}
-        <div style={{ position: 'relative', height: '100vh' }}>
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  width: '100%',
-                  height: '100vh',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'var(--bg-deep)',
-                }}
-              >
-                <div className="logo-dot" style={{ width: 16, height: 16 }} />
-              </div>
-            }
-          >
-            <GraphSection />
-          </Suspense>
-
-          {/* Hero overlay */}
-          <div className="hero-overlay">
-            <h1 className="hero-tagline">
-              Every npm install is a person.
-            </h1>
-            <p className="hero-subtitle">
-              See the humans behind your code. Connect your project.
-              Watch the web of gratitude grow.
-            </p>
-            <Link href="/connect" className="hero-cta">
-              <IconBrandGithub size={20} />
-              Connect Your GitHub
-            </Link>
-          </div>
-
-          {/* Stats bar */}
-          <div className="stats-bar">
-            <div className="stat-item">
-              <div className="stat-value">2</div>
-              <div className="stat-label">Stories</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">0</div>
-              <div className="stat-label">Projects</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">0</div>
-              <div className="stat-label">Thank Yous</div>
-            </div>
-          </div>
-        </div>
+        {/* Hero: Graph + Overlay with Dive-In mode */}
+        <HeroSection />
 
         {/* Manifesto */}
         <section className="manifesto">

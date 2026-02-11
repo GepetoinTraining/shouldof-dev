@@ -38,7 +38,7 @@ const SEED_GRAPH: GraphData = {
     ],
 };
 
-export default function GraphSection() {
+export default function GraphSection({ interactive = false }: { interactive?: boolean }) {
     const [graphData, setGraphData] = useState<GraphData>(SEED_GRAPH);
 
     // In future: fetch live data from /api/graph
@@ -55,5 +55,5 @@ export default function GraphSection() {
             });
     }, []);
 
-    return <ForceGraph data={graphData} />;
+    return <ForceGraph data={graphData} interactive={interactive} />;
 }
