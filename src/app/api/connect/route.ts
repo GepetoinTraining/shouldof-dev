@@ -7,11 +7,19 @@ import { fetchPackageJson } from '@/lib/github';
 import { fetchNpmPackageInfo, extractAuthorName, extractRepoUrl, slugify } from '@/lib/npm';
 import { z } from 'zod';
 import { generateWikiForPackage } from '@/lib/ai-wiki';
+import { canGenerate, logUsage } from '@/lib/funding';
 
 // Fire-and-forget wiki generation for newly created packages
 async function triggerWikiGeneration(slugs: string[]) {
     for (const slug of slugs) {
         try {
+            // Check funding pool before each generation
+            const funded = await canGenerate();
+            if (!funded) {
+                console.log(`[funding] Pool empty — skipping wiki for ${slug}`);
+                break; // Stop all generations when pool is dry
+            }
+
             const [pkg] = await db.select().from(packages).where(eq(packages.slug, slug)).limit(1);
             if (!pkg || pkg.backstoryMd) continue; // skip if already has a wiki
 
@@ -44,6 +52,15 @@ async function triggerWikiGeneration(slugs: string[]) {
                     creatorName: pkg.creatorName || wiki.title,
                 })
                 .where(eq(packages.id, pkg.id));
+
+            // Log API usage for transparency
+            await logUsage({
+                packageName: pkg.name,
+                packageSlug: slug,
+                tokensIn: wiki.tokensIn,
+                tokensOut: wiki.tokensOut,
+                costUsd: wiki.costUsd,
+            });
 
             // Small delay between API calls to avoid rate limiting
             await new Promise(r => setTimeout(r, 1000));

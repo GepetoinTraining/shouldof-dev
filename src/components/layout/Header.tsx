@@ -18,6 +18,7 @@ export default function Header() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <SearchBar />
                 <nav className="nav-links" style={{ margin: 0 }}>
+                    <Link href="/fund" className="nav-link">Fund</Link>
                     <Link href="/connect" className="nav-link">Connect</Link>
                     {session ? (
                         <button

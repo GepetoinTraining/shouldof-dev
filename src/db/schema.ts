@@ -122,6 +122,30 @@ export const packageConnections = sqliteTable('package_connections', {
   relationship: text('relationship').notNull().default('depends_on'), // depends_on, peer, dev
 });
 
+// ─── API Funding Pool ────────────────────────────────────
+// Community funds the storyteller — every $1 tells ~33 stories
+export const apiFunding = sqliteTable('api_funding', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').references(() => users.id), // nullable = anonymous
+  amount: real('amount').notNull(),
+  currency: text('currency').notNull().default('USD'),
+  stripePaymentId: text('stripe_payment_id'),
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+});
+
+// ─── API Usage Log ───────────────────────────────────────
+// Track every wiki generation — full transparency
+export const apiUsageLog = sqliteTable('api_usage_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  wikiPackageName: text('wiki_package_name').notNull(),
+  wikiPackageSlug: text('wiki_package_slug').notNull(),
+  tokensIn: integer('tokens_in').notNull().default(0),
+  tokensOut: integer('tokens_out').notNull().default(0),
+  costUsd: real('cost_usd').notNull().default(0),
+  model: text('model').notNull().default('claude-sonnet-4-20250514'),
+  createdAt: text('created_at').notNull().default('CURRENT_TIMESTAMP'),
+});
+
 // ─── Relations ───────────────────────────────────────────
 
 export const packagesRelations = relations(packages, ({ many }) => ({

@@ -19,6 +19,9 @@ export interface GeneratedWiki {
     subtitle: string;    // one-line poetic summary
     location: string;    // creator's location or "Open Source"
     generatedBy: string; // model identifier
+    tokensIn: number;
+    tokensOut: number;
+    costUsd: number;     // estimated cost based on claude-sonnet-4-20250514 pricing
 }
 
 /**
@@ -138,6 +141,12 @@ Rules:
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
 
+    // Track token usage
+    const tokensIn = response.usage?.input_tokens || 0;
+    const tokensOut = response.usage?.output_tokens || 0;
+    // Sonnet pricing: $3/M input, $15/M output
+    const costUsd = (tokensIn * 3 / 1_000_000) + (tokensOut * 15 / 1_000_000);
+
     // Parse the JSON response
     const parsed = JSON.parse(text);
 
@@ -147,6 +156,9 @@ Rules:
         subtitle: parsed.subtitle || metadata?.description || '',
         location: parsed.location || 'Open Source',
         generatedBy: 'claude-sonnet-4-20250514',
+        tokensIn,
+        tokensOut,
+        costUsd,
     };
 }
 
