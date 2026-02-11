@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { IconExternalLink } from '@tabler/icons-react';
 import wikiContent from '@/data/wiki/content.json';
 import WikiInteractive from '@/components/WikiInteractive';
+import AdminRegenButton from '@/components/AdminRegenButton';
 import { db } from '@/db';
 import { packages } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { isAdmin } from '@/lib/admin';
 
 const staticWiki = wikiContent as Record<string, any>;
 
@@ -51,6 +53,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function WikiPage({ params }: PageProps) {
     const { slug } = await params;
+    const adminUser = await isAdmin();
 
     // === Static wiki (hand-written, always wins) ===
     if (staticWiki[slug]) {
@@ -71,6 +74,7 @@ export default async function WikiPage({ params }: PageProps) {
             verified: true,
             claimed: false,
             claimedBy: null,
+            isAdmin: adminUser,
         });
     }
 
@@ -125,6 +129,7 @@ export default async function WikiPage({ params }: PageProps) {
         verified: pkg.backstoryVerified || false,
         claimed: pkg.claimed || false,
         claimedBy: pkg.claimedBy,
+        isAdmin: adminUser,
     });
 }
 
@@ -146,6 +151,7 @@ interface WikiPageData {
     verified: boolean;
     claimed: boolean;
     claimedBy: string | null;
+    isAdmin: boolean;
 }
 
 function renderWikiPage(data: WikiPageData) {
@@ -177,6 +183,13 @@ function renderWikiPage(data: WikiPageData) {
                         }}
                     >
                         ✨ AI-generated · Not yet verified by a human
+                    </div>
+                )}
+
+                {/* Admin: Regenerate button */}
+                {data.isAdmin && (
+                    <div style={{ marginBottom: 16 }}>
+                        <AdminRegenButton slug={data.slug} />
                     </div>
                 )}
 

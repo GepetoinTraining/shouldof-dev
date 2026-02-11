@@ -25,18 +25,16 @@ export interface GeneratedWiki {
 }
 
 /**
- * Fetch README excerpt from a GitHub repo via the raw URL.
+ * Fetch README excerpt from a GitHub repo — prioritizes human-relevant sections.
  */
 export async function fetchReadmeExcerpt(repoUrl: string | null | undefined): Promise<string | null> {
     if (!repoUrl) return null;
 
-    // Extract owner/repo from GitHub URL
     const match = repoUrl.match(/github\.com\/([^/]+\/[^/]+)/);
     if (!match) return null;
 
-    const ownerRepo = match[1];
+    const ownerRepo = match[1].replace(/\.git$/, '');
 
-    // Try common README filenames
     for (const filename of ['README.md', 'readme.md', 'Readme.md']) {
         try {
             const res = await fetch(
@@ -45,7 +43,19 @@ export async function fetchReadmeExcerpt(repoUrl: string | null | undefined): Pr
             );
             if (res.ok) {
                 const text = await res.text();
-                return text.slice(0, 2000);
+                const fullText = text.slice(0, 8000);
+
+                // Extract human-relevant sections first
+                const humanPatterns = /(?:^|\n)##?\s*(?:Why|Motivation|Background|Story|About|History|Origin|Philosophy|Vision|Mission|Credits|Acknowledgements|Authors?)[\s\S]*?(?=\n##?\s|$)/gi;
+                const humanSections = fullText.match(humanPatterns);
+
+                if (humanSections && humanSections.join('').length > 100) {
+                    // Found substantial human sections — send those + first 1000 chars for context
+                    return fullText.slice(0, 1000) + '\n\n---HUMAN SECTIONS---\n\n' + humanSections.join('\n\n').slice(0, 3000);
+                }
+
+                // No human sections found — send first 3000 chars
+                return fullText.slice(0, 3000);
             }
         } catch {
             continue;
@@ -74,7 +84,8 @@ export async function fetchNpmDownloads(packageName: string): Promise<number | n
 }
 
 /**
- * Generate a wiki page for a package using Claude.
+ * Generate a wiki page for a package using Claude with web search.
+ * The prompt is person-first: find the human, tell their story.
  */
 export async function generateWiki(
     packageName: string,
@@ -104,58 +115,93 @@ export async function generateWiki(
 
     const context = contextParts.join('\n');
 
-    const prompt = `You are writing for shouldof.dev — a platform that makes the humans behind open source software visible. Every npm install is a person.
+    const prompt = `You are a researcher for shouldof.dev — a platform that makes the humans behind open source visible. Every npm install is a person. You have web search available — USE IT.
 
-Your job is to write a wiki page about the package "${packageName}" for this platform. The tone should be warm, human, and specific — not corporate or generic. Write like a journalist who deeply respects the craft of programming.
+Your job: find the PERSON behind "${packageName}" and tell their story.
 
-Here is everything we know about this package:
-${context || 'Only the package name is known.'}
+RESEARCH STEPS (do these in order):
+1. Search for the creator's name + "interview" OR "blog" OR "conference talk" OR "podcast"
+2. Search for "${packageName} origin story" OR "why I built ${packageName}"
+3. Search for the creator's location, background, what they were doing when they built this
+4. If the creator has a Twitter/X profile, search for it — bios reveal a lot
 
-Write a JSON object with these exact keys:
+Here is what we already know (use this as starting context, not as your only source):
+${context || 'Only the package name.'}
+
+WRITING INSTRUCTIONS:
+
+Write about the PERSON first, the package second. Specific human details matter:
+- "Built during the pandemic while learning TypeScript" > "created to solve validation"
+- "No VCs, no vacations, funded from savings" > "bootstrapped approach to development"
+- "Ukrainian flag in his Twitter handle, building through a war" > "dedicated open source maintainer"
+- "Lost a Visio file in 2014" > "saw a gap in diagramming tools"
+
+If you find a direct quote from the creator, USE IT. Their words > your summary.
+
+Include the SILENCE — the gap between impact and recognition:
+- "[X] weekly downloads but only [Y] Twitter followers"
+- "[X] GitHub stars but [Y] Medium followers"
+- "Every AI model trained on his syntax. Collective response: silence."
+The contrast IS the story. It's why this platform exists.
+
+If you genuinely cannot find personal details after searching, say so HONESTLY:
+"We couldn't find Colin's story yet — if you know him, help us write it"
+NOT generic filler like "his approach to API design reveals someone who thinks deeply"
+
+Return ONLY valid JSON (no markdown fences, no explanation):
 
 {
-  "title": "Creator's real name if known, otherwise 'The [package] Team'",
-  "subtitle": "One poetic line describing what they built (e.g., 'Diagrams from text, like Markdown for visuals')",
-  "location": "Creator's location if known from context, otherwise 'Open Source'",
+  "title": "Creator's real name (never 'The X Team' if a real person exists)",
+  "subtitle": "One poetic line. Specific > generic. 'Diagrams from text, like Markdown for visuals' > 'A powerful diagramming solution'",
+  "location": "City, Country if found. 'Open Source' ONLY as genuine last resort",
   "sections": {
-    "who": "2-3 sentences about the creator as a person. What do we know about them? If we know almost nothing, say that honestly — 'We don't know much about [name] yet, but their work speaks volumes.' Don't invent biographical details.",
-    "the_moment": "2-3 sentences about why this package was created. What frustration or insight led to it? If unknown, describe the problem it solves in human terms.",
-    "what_it_does": "2-3 sentences explaining what the package does in layperson terms. No marketing language. Be specific about the actual functionality.",
-    "impact": "2-3 sentences about the package's real impact — download numbers, who uses it, how big its reach is. Use the actual numbers we provided if available.",
-    "connections": "1-2 sentences about how this package connects to the broader ecosystem. What depends on it? What does it enable?"
+    "who": "The person. Where they're from, what they were doing, what shaped them. Real details from your research. 2-3 sentences.",
+    "the_moment": "WHY this exists. The frustration, the accident, the side project that escaped. Not a feature description. 2-3 sentences.",
+    "what_it_does": "What it actually does, explained to a human who doesn't code. 2-3 sentences.",
+    "impact": "Real numbers (use exact counts, don't round) + the recognition gap. 2-3 sentences.",
+    "connections": "What depends on this. What breaks without it. The invisible web. 1-2 sentences."
   }
-}
-
-Rules:
-- Be honest. If you don't know something, say so. Never fabricate biographical details.
-- Be warm but not sycophantic. These are real humans, not heroes in a story.
-- Use actual numbers when available. Don't round "3,247,891" to "millions".
-- Keep each section to 2-3 sentences maximum. Brevity matters.
-- Return ONLY valid JSON. No markdown fences, no explanation.`;
+}`;
 
     const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        max_tokens: 4096,
+        tools: [
+            {
+                type: "web_search_20250305" as any,
+                name: "web_search",
+                max_uses: 5,
+            } as any,
+        ],
         messages: [{ role: 'user', content: prompt }],
     });
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    // With web search, response contains multiple content blocks (text + tool_use + tool_result).
+    // Extract all text blocks and concatenate.
+    const text = response.content
+        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+        .map(block => block.text)
+        .join('');
 
     // Track token usage
     const tokensIn = response.usage?.input_tokens || 0;
     const tokensOut = response.usage?.output_tokens || 0;
-    // Sonnet pricing: $3/M input, $15/M output
+    // Sonnet pricing: $3/M input, $15/M output + web search overhead
     const costUsd = (tokensIn * 3 / 1_000_000) + (tokensOut * 15 / 1_000_000);
 
-    // Parse the JSON response
-    const parsed = JSON.parse(text);
+    // Parse the JSON response — handle potential markdown fences
+    let jsonStr = text.trim();
+    if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    const parsed = JSON.parse(jsonStr);
 
     return {
         sections: parsed.sections,
         title: parsed.title || metadata?.creatorName || `The ${packageName} Team`,
         subtitle: parsed.subtitle || metadata?.description || '',
         location: parsed.location || 'Open Source',
-        generatedBy: 'claude-sonnet-4-20250514',
+        generatedBy: 'claude-sonnet-4-20250514+web-search',
         tokensIn,
         tokensOut,
         costUsd,
