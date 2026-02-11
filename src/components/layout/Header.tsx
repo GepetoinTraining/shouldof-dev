@@ -19,6 +19,7 @@ export default function Header() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 <SearchBar />
                 <nav className="nav-links" style={{ margin: 0 }}>
+                    <Link href="/about" className="nav-link">About</Link>
                     <Link href="/fund" className="nav-link">Fund</Link>
                     {session ? (
                         <>

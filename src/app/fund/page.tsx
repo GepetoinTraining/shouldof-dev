@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Providers from '@/components/Providers';
 import FundingWidget from '@/components/FundingWidget';
@@ -12,7 +13,7 @@ export default function FundPage() {
         <Providers>
             <header className="site-header">
                 <Link href="/" className="site-logo">
-                    <span className="logo-dot" />
+                    <img src="/favicon.svg" alt="" width={20} height={20} style={{ display: 'block' }} />
                     shouldof.dev
                 </Link>
                 <nav className="nav-links">
@@ -48,8 +49,14 @@ export default function FundPage() {
                     </p>
                 </div>
 
-                {/* Transparency Widget */}
-                <FundingWidget />
+                {/* Transparency Widget — wrapped in Suspense for useSearchParams */}
+                <Suspense fallback={
+                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                        Loading funding stats…
+                    </div>
+                }>
+                    <FundingWidget />
+                </Suspense>
 
                 {/* Explanation */}
                 <section style={{ marginTop: 48 }}>
@@ -60,6 +67,7 @@ export default function FundPage() {
                             { icon: '🔍', text: 'We read their package.json and find all dependencies' },
                             { icon: '🤖', text: 'Claude researches each package and writes a wiki about the creator' },
                             { icon: '💰', text: 'Each wiki costs ~$0.03 in API credits' },
+                            { icon: '💳', text: 'You fund via Stripe — secure, instant, transparent' },
                             { icon: '💜', text: 'Your contribution funds the next batch of stories' },
                         ].map((step, i) => (
                             <div
@@ -83,7 +91,7 @@ export default function FundPage() {
                     </div>
                 </section>
 
-                {/* Why not just use Pedro's API key? */}
+                {/* Why community-funded? */}
                 <section style={{ marginTop: 48 }}>
                     <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Why community-funded?</h2>
                     <p style={{
