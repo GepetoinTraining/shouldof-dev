@@ -47,15 +47,22 @@ export const metadata: Metadata = {
   },
   manifest: '/manifest.json',
   openGraph: {
-    title: 'shouldof.dev — The Gratitude Graph',
-    description: 'A visual web of open source interconnection. Connect your GitHub. See who you depend on. Say thank you.',
+    title: 'The Gratitude Graph',
+    description: 'Connect your GitHub, map your dependencies, and thank the OSS humans powering your code.',
     type: 'website',
     url: 'https://shouldof.dev',
+    images: [{
+      url: 'https://shouldof.dev/og-image.png',
+      width: 1200,
+      height: 630,
+      alt: 'shouldof.dev — Every npm install is a person',
+    }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'shouldof.dev — The Gratitude Graph',
-    description: 'Every npm install is a person.',
+    title: 'The Gratitude Graph',
+    description: 'Break the silence of the good in open source.',
+    images: ['https://shouldof.dev/og-image.png'],
   },
 };
 
