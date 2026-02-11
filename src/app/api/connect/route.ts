@@ -6,6 +6,53 @@ import { eq } from 'drizzle-orm';
 import { fetchPackageJson } from '@/lib/github';
 import { fetchNpmPackageInfo, extractAuthorName, extractRepoUrl, slugify } from '@/lib/npm';
 import { z } from 'zod';
+import { generateWikiForPackage } from '@/lib/ai-wiki';
+
+// Fire-and-forget wiki generation for newly created packages
+async function triggerWikiGeneration(slugs: string[]) {
+    for (const slug of slugs) {
+        try {
+            const [pkg] = await db.select().from(packages).where(eq(packages.slug, slug)).limit(1);
+            if (!pkg || pkg.backstoryMd) continue; // skip if already has a wiki
+
+            const { wiki, readmeExcerpt, weeklyDownloads } = await generateWikiForPackage(
+                pkg.name,
+                {
+                    description: pkg.description,
+                    creatorName: pkg.creatorName,
+                    repoUrl: pkg.repoUrl,
+                    homepageUrl: pkg.homepageUrl,
+                    npmUrl: pkg.npmUrl,
+                }
+            );
+
+            const backstoryData = {
+                ...wiki.sections,
+                title: wiki.title,
+                subtitle: wiki.subtitle,
+                location: wiki.location,
+            };
+
+            await db.update(packages)
+                .set({
+                    backstoryMd: JSON.stringify(backstoryData),
+                    backstoryGeneratedBy: wiki.generatedBy,
+                    backstoryVerified: false,
+                    generatedAt: new Date().toISOString(),
+                    githubReadmeExcerpt: readmeExcerpt,
+                    npmWeeklyDownloads: weeklyDownloads,
+                    creatorName: pkg.creatorName || wiki.title,
+                })
+                .where(eq(packages.id, pkg.id));
+
+            // Small delay between API calls to avoid rate limiting
+            await new Promise(r => setTimeout(r, 1000));
+        } catch (err) {
+            console.error(`Wiki generation failed for ${slug}:`, err);
+            continue;
+        }
+    }
+}
 
 const connectSchema = z.object({
     repoFullName: z.string().min(1),
@@ -137,6 +184,12 @@ export async function POST(request: Request) {
         await db.update(users)
             .set({ projectCount: (user.projectCount || 0) + 1 })
             .where(eq(users.id, user.id));
+
+        // 6. Fire-and-forget: trigger AI wiki generation for new packages
+        // Don't await — let it run in the background
+        if (process.env.ANTHROPIC_API_KEY) {
+            triggerWikiGeneration(allDeps.map(d => slugify(d.name)));
+        }
 
         return NextResponse.json({
             success: true,

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { IconBrandGithub } from '@tabler/icons-react';
+import SearchBar from '@/components/SearchBar';
 
 export default function Header() {
     const { data: session } = useSession();
@@ -13,32 +14,31 @@ export default function Header() {
                 <span className="logo-dot" />
                 shouldof.dev
             </Link>
-            <nav className="nav-links">
-                <Link href="/wiki/markdown" className="nav-link">Wiki</Link>
-                {session ? (
-                    <>
-                        <Link href="/connect" className="nav-link">
-                            Connect
-                        </Link>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <SearchBar />
+                <nav className="nav-links" style={{ margin: 0 }}>
+                    <Link href="/connect" className="nav-link">Connect</Link>
+                    {session ? (
                         <button
-                            className="nav-link"
                             onClick={() => signOut()}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                            className="nav-link"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
                         >
-                            {session.user?.name || session.user?.githubUsername}
+                            Sign out
                         </button>
-                    </>
-                ) : (
-                    <button
-                        className="hero-cta"
-                        onClick={() => signIn('github')}
-                        style={{ padding: '8px 20px', fontSize: '13px' }}
-                    >
-                        <IconBrandGithub size={16} />
-                        Sign in
-                    </button>
-                )}
-            </nav>
+                    ) : (
+                        <button
+                            onClick={() => signIn('github')}
+                            className="nav-link"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                            <IconBrandGithub size={16} />
+                            Sign in
+                        </button>
+                    )}
+                </nav>
+            </div>
         </header>
     );
 }

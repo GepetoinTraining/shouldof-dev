@@ -19,10 +19,15 @@ export const packages = sqliteTable('packages', {
   npmUrl: text('npm_url'),
   homepageUrl: text('homepage_url'),
 
+  // Research context (for AI generation)
+  githubReadmeExcerpt: text('github_readme_excerpt'), // first 2000 chars of README
+  npmWeeklyDownloads: integer('npm_weekly_downloads'), // snapshot from npm
+
   // Wiki / backstory
-  backstoryMd: text('backstory_md'),
-  backstoryGeneratedBy: text('backstory_generated_by'), // 'human', 'claude-sonnet', etc.
+  backstoryMd: text('backstory_md'), // JSON string with section keys
+  backstoryGeneratedBy: text('backstory_generated_by'), // 'human', 'claude-sonnet-4-20250514', etc.
   backstoryVerified: integer('backstory_verified', { mode: 'boolean' }).default(false),
+  generatedAt: text('generated_at'), // ISO timestamp of AI generation
 
   // Stats
   weeklyDownloads: integer('weekly_downloads').default(0),

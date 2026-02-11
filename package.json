@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@emotion/react": "^11.14.0",
     "@libsql/client": "^0.17.0",
     "@mantine/core": "^8.3.14",

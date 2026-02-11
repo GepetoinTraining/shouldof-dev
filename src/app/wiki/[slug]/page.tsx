@@ -1,36 +1,154 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { IconArrowLeft, IconExternalLink, IconHeart } from '@tabler/icons-react';
+import { IconExternalLink } from '@tabler/icons-react';
 import wikiContent from '@/data/wiki/content.json';
+import WikiInteractive from '@/components/WikiInteractive';
+import { db } from '@/db';
+import { packages } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
-const wikiData = wikiContent as Record<string, any>;
-type WikiSlug = keyof typeof wikiContent;
+const staticWiki = wikiContent as Record<string, any>;
 
 interface PageProps {
     params: Promise<{ slug: string }>;
 }
 
+// Generate static params for hand-written wikis only
 export async function generateStaticParams() {
-    return Object.keys(wikiContent).map((slug) => ({ slug }));
+    return Object.keys(staticWiki).map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
     const { slug } = await params;
-    const wiki = wikiData[slug];
-    if (!wiki) return {};
 
-    return {
-        title: `${wiki.title} — shouldof.dev`,
-        description: wiki.sections.who,
-    };
+    // Check static first
+    if (staticWiki[slug]) {
+        return {
+            title: `${staticWiki[slug].title} — shouldof.dev`,
+            description: staticWiki[slug].sections.who,
+        };
+    }
+
+    // Check DB
+    try {
+        const [pkg] = await db.select().from(packages).where(eq(packages.slug, slug)).limit(1);
+        if (pkg?.backstoryMd) {
+            const backstory = JSON.parse(pkg.backstoryMd);
+            return {
+                title: `${backstory.title || pkg.creatorName || pkg.name} — shouldof.dev`,
+                description: backstory.who || pkg.description,
+            };
+        }
+        if (pkg) {
+            return { title: `${pkg.name} — shouldof.dev`, description: pkg.description };
+        }
+    } catch {
+        // fall through
+    }
+
+    return {};
 }
 
 export default async function WikiPage({ params }: PageProps) {
     const { slug } = await params;
-    const wiki = wikiData[slug];
 
-    if (!wiki) notFound();
+    // === Static wiki (hand-written, always wins) ===
+    if (staticWiki[slug]) {
+        const wiki = staticWiki[slug];
+        return renderWikiPage({
+            slug,
+            packageName: wiki.packageName,
+            title: wiki.title,
+            subtitle: wiki.subtitle,
+            location: wiki.location,
+            sections: wiki.sections,
+            links: wiki.links,
+            stats: wiki.stats,
+            noDonateButton: wiki.no_donate_button,
+            donateAlternative: wiki.donate_alternative,
+            specialNote: wiki.sections.special_note,
+            generatedBy: null,
+            verified: true,
+            claimed: false,
+            claimedBy: null,
+        });
+    }
 
+    // === DB-backed wiki ===
+    let pkg;
+    try {
+        const [result] = await db.select().from(packages).where(eq(packages.slug, slug)).limit(1);
+        pkg = result;
+    } catch {
+        notFound();
+    }
+
+    if (!pkg) notFound();
+
+    // Package exists but no backstory yet
+    if (!pkg.backstoryMd) {
+        return renderEmptyWikiPage({
+            slug,
+            name: pkg.name,
+            description: pkg.description,
+            creatorName: pkg.creatorName,
+            npmUrl: pkg.npmUrl,
+            repoUrl: pkg.repoUrl,
+        });
+    }
+
+    // Parse backstory
+    const backstory = JSON.parse(pkg.backstoryMd);
+
+    const stats: Record<string, string> = {};
+    if (pkg.npmWeeklyDownloads) stats['weekly downloads'] = pkg.npmWeeklyDownloads.toLocaleString();
+    if (pkg.userCount) stats['shouldof.dev users'] = String(pkg.userCount);
+    if (pkg.thankYouCount) stats['thank yous'] = String(pkg.thankYouCount);
+
+    return renderWikiPage({
+        slug,
+        packageName: pkg.name,
+        title: backstory.title || pkg.creatorName || pkg.name,
+        subtitle: backstory.subtitle || pkg.description || '',
+        location: backstory.location || 'Open Source',
+        sections: backstory,
+        links: [
+            pkg.npmUrl ? { label: 'npm', url: pkg.npmUrl } : null,
+            pkg.repoUrl ? { label: 'GitHub', url: pkg.repoUrl } : null,
+            pkg.homepageUrl ? { label: 'Homepage', url: pkg.homepageUrl } : null,
+        ].filter((l): l is { label: string; url: string } => l !== null),
+        stats,
+        noDonateButton: false,
+        donateAlternative: null,
+        specialNote: null,
+        generatedBy: pkg.backstoryGeneratedBy,
+        verified: pkg.backstoryVerified || false,
+        claimed: pkg.claimed || false,
+        claimedBy: pkg.claimedBy,
+    });
+}
+
+// === Renderers ===
+
+interface WikiPageData {
+    slug: string;
+    packageName: string;
+    title: string;
+    subtitle: string;
+    location: string;
+    sections: any;
+    links: { label: string; url: string }[];
+    stats: Record<string, string>;
+    noDonateButton: boolean;
+    donateAlternative: string | null;
+    specialNote: string | null;
+    generatedBy: string | null;
+    verified: boolean;
+    claimed: boolean;
+    claimedBy: string | null;
+}
+
+function renderWikiPage(data: WikiPageData) {
     return (
         <>
             <header className="site-header">
@@ -44,158 +162,128 @@ export default async function WikiPage({ params }: PageProps) {
             </header>
 
             <article className="wiki-page">
+                {/* AI badge */}
+                {data.generatedBy && !data.verified && (
+                    <div
+                        style={{
+                            padding: '8px 14px',
+                            background: 'rgba(124, 58, 237, 0.06)',
+                            border: '1px solid rgba(124, 58, 237, 0.15)',
+                            borderRadius: 8,
+                            fontSize: 12,
+                            color: 'var(--text-muted)',
+                            textAlign: 'center',
+                            marginBottom: 24,
+                        }}
+                    >
+                        ✨ AI-generated · Not yet verified by a human
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="wiki-header">
-                    <div className="wiki-package-name">{wiki.packageName}</div>
-                    <h1 className="wiki-title">{wiki.title}</h1>
+                    <div className="wiki-package-name">{data.packageName}</div>
+                    <h1 className="wiki-title">{data.title}</h1>
                     <p className="wiki-creator-location">
-                        📍 {wiki.location} &nbsp;·&nbsp; {wiki.subtitle}
+                        📍 {data.location} &nbsp;·&nbsp; {data.subtitle}
                     </p>
                 </div>
 
-                {/* Who */}
-                <section className="wiki-section">
-                    <h2 className="wiki-section-title">Who</h2>
-                    <div className="wiki-body">
-                        <p>{wiki.sections.who}</p>
-                    </div>
-                </section>
+                {/* Sections */}
+                {data.sections.who && (
+                    <section className="wiki-section">
+                        <h2 className="wiki-section-title">Who</h2>
+                        <div className="wiki-body"><p>{data.sections.who}</p></div>
+                    </section>
+                )}
 
-                {/* The Moment */}
-                <section className="wiki-section">
-                    <h2 className="wiki-section-title">The Moment</h2>
-                    <div className="wiki-body">
-                        <p>{wiki.sections.the_moment}</p>
-                    </div>
-                </section>
+                {data.sections.the_moment && (
+                    <section className="wiki-section">
+                        <h2 className="wiki-section-title">The Moment</h2>
+                        <div className="wiki-body"><p>{data.sections.the_moment}</p></div>
+                    </section>
+                )}
 
-                {/* What It Does */}
-                <section className="wiki-section">
-                    <h2 className="wiki-section-title">What It Does</h2>
-                    <div className="wiki-body">
-                        <p>{wiki.sections.what_it_does}</p>
-                    </div>
-                </section>
+                {data.sections.what_it_does && (
+                    <section className="wiki-section">
+                        <h2 className="wiki-section-title">What It Does</h2>
+                        <div className="wiki-body"><p>{data.sections.what_it_does}</p></div>
+                    </section>
+                )}
 
-                {/* Impact */}
-                <section className="wiki-section">
-                    <h2 className="wiki-section-title">Impact</h2>
-                    <div className="wiki-body">
-                        <p>{wiki.sections.impact}</p>
-                    </div>
-                </section>
+                {data.sections.impact && (
+                    <section className="wiki-section">
+                        <h2 className="wiki-section-title">Impact</h2>
+                        <div className="wiki-body"><p>{data.sections.impact}</p></div>
+                    </section>
+                )}
 
-                {/* Connections */}
-                <section className="wiki-section">
-                    <h2 className="wiki-section-title">Connections</h2>
-                    <div className="wiki-body">
-                        <p>{wiki.sections.connections}</p>
-                    </div>
-                </section>
+                {data.sections.connections && (
+                    <section className="wiki-section">
+                        <h2 className="wiki-section-title">Connections</h2>
+                        <div className="wiki-body"><p>{data.sections.connections}</p></div>
+                    </section>
+                )}
 
-                {/* Special Note (Aaron Swartz) */}
-                {'special_note' in wiki.sections && (
+                {/* Special Note (In Memoriam) */}
+                {data.specialNote && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title" style={{ borderColor: 'rgba(244, 63, 94, 0.3)', color: '#f43f5e' }}>
                             In Memoriam
                         </h2>
-                        <div className="wiki-body">
-                            <p>{(wiki.sections as any).special_note}</p>
-                        </div>
+                        <div className="wiki-body"><p>{data.specialNote}</p></div>
                     </section>
                 )}
 
                 {/* Stats */}
-                <div className="wiki-stats-grid">
-                    {Object.entries(wiki.stats).map(([key, value]) => (
-                        <div key={key} className="wiki-stat-card">
-                            <div className="value">{String(value)}</div>
-                            <div className="label">{key.replace(/_/g, ' ')}</div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Links */}
-                <section className="wiki-section" style={{ marginTop: 40 }}>
-                    <h2 className="wiki-section-title">Links</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {wiki.links.map((link: { label: string; url: string }) => (
-                            <a
-                                key={link.url}
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                    color: 'var(--accent-violet-light)',
-                                    textDecoration: 'none',
-                                    fontSize: 15,
-                                    transition: 'color 0.2s',
-                                }}
-                            >
-                                <IconExternalLink size={16} />
-                                {link.label}
-                            </a>
+                {Object.keys(data.stats).length > 0 && (
+                    <div className="wiki-stats-grid">
+                        {Object.entries(data.stats).map(([key, value]) => (
+                            <div key={key} className="wiki-stat-card">
+                                <div className="value">{String(value)}</div>
+                                <div className="label">{key.replace(/_/g, ' ')}</div>
+                            </div>
                         ))}
                     </div>
-                </section>
+                )}
 
-                {/* Donate / Special Handling */}
-                {wiki.no_donate_button ? (
+                {/* Links */}
+                {data.links.length > 0 && (
                     <section className="wiki-section" style={{ marginTop: 40 }}>
-                        <div
-                            style={{
-                                padding: '20px 24px',
-                                background: 'var(--bg-surface)',
-                                borderRadius: 12,
-                                border: '1px solid rgba(244, 63, 94, 0.15)',
-                                fontStyle: 'italic',
-                                color: 'var(--text-secondary)',
-                                lineHeight: 1.7,
-                                fontSize: 15,
-                            }}
-                        >
-                            {wiki.donate_alternative}
+                        <h2 className="wiki-section-title">Links</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {data.links.map((link: { label: string; url: string }) => (
+                                <a
+                                    key={link.url}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        color: 'var(--accent-violet-light)',
+                                        textDecoration: 'none',
+                                        fontSize: 15,
+                                        transition: 'color 0.2s',
+                                    }}
+                                >
+                                    <IconExternalLink size={16} />
+                                    {link.label}
+                                </a>
+                            ))}
                         </div>
-                    </section>
-                ) : (
-                    <section className="wiki-section" style={{ marginTop: 40 }}>
-                        <button
-                            className="hero-cta"
-                            style={{ width: '100%', justifyContent: 'center' }}
-                        >
-                            <IconHeart size={18} />
-                            Thank This Developer
-                        </button>
-                        <p
-                            style={{
-                                textAlign: 'center',
-                                fontSize: 13,
-                                color: 'var(--text-muted)',
-                                marginTop: 12,
-                            }}
-                        >
-                            Send a free thank-you message. No payment required — the words matter most.
-                        </p>
                     </section>
                 )}
 
-                {/* Thank You Wall */}
-                <section className="thank-you-wall">
-                    <h2 className="wiki-section-title">Thank-You Wall</h2>
-                    <div
-                        style={{
-                            padding: '24px',
-                            textAlign: 'center',
-                            color: 'var(--text-muted)',
-                            fontSize: 14,
-                        }}
-                    >
-                        Be the first to say thank you. 💜
-                    </div>
-                </section>
+                {/* Interactive section (client component) */}
+                <WikiInteractive
+                    slug={data.slug}
+                    noDonateButton={data.noDonateButton}
+                    donateAlternative={data.donateAlternative || undefined}
+                    claimed={data.claimed}
+                    claimedBy={data.claimedBy || undefined}
+                />
 
                 {/* Transparency Note */}
                 <div
@@ -209,11 +297,90 @@ export default async function WikiPage({ params }: PageProps) {
                         textAlign: 'center',
                     }}
                 >
-                    This wiki was written by a human. No AI was involved.
+                    {data.generatedBy
+                        ? `This wiki was generated by ${data.generatedBy}. Help us verify it.`
+                        : 'This wiki was written by a human. No AI was involved.'}
                 </div>
             </article>
 
             {/* Footer */}
+            <footer className="site-footer">
+                <p className="footer-text">
+                    Built with <span className="footer-heart">♥</span> at Node Zero, Joinville, SC, Brazil
+                </p>
+            </footer>
+        </>
+    );
+}
+
+function renderEmptyWikiPage(data: {
+    slug: string;
+    name: string;
+    description: string | null;
+    creatorName: string | null;
+    npmUrl: string | null;
+    repoUrl: string | null;
+}) {
+    return (
+        <>
+            <header className="site-header">
+                <Link href="/" className="site-logo">
+                    <span className="logo-dot" />
+                    shouldof.dev
+                </Link>
+                <nav className="nav-links">
+                    <Link href="/" className="nav-link">← Back to Graph</Link>
+                </nav>
+            </header>
+
+            <article className="wiki-page">
+                <div className="wiki-header">
+                    <div className="wiki-package-name">{data.name}</div>
+                    <h1 className="wiki-title">{data.creatorName || data.name}</h1>
+                    {data.description && (
+                        <p className="wiki-creator-location">{data.description}</p>
+                    )}
+                </div>
+
+                <section className="wiki-section" style={{ textAlign: 'center', padding: '48px 24px' }}>
+                    <div style={{ fontSize: 40, marginBottom: 16 }}>🌱</div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                        Story coming soon
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 15, lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
+                        This package is on the graph, but its story hasn&apos;t been written yet.
+                        AI generation is in progress — check back soon to learn about the human behind <strong>{data.name}</strong>.
+                    </p>
+                </section>
+
+                {/* Interactive section (thank-you still works even without wiki) */}
+                <WikiInteractive
+                    slug={data.slug}
+                    noDonateButton={false}
+                    claimed={false}
+                />
+
+                <div
+                    style={{
+                        marginTop: 24,
+                        display: 'flex',
+                        gap: 12,
+                        justifyContent: 'center',
+                    }}
+                >
+                    {data.npmUrl && (
+                        <a href={data.npmUrl} target="_blank" rel="noopener noreferrer" className="nav-link">
+                            npm →
+                        </a>
+                    )}
+                    {data.repoUrl && (
+                        <a href={data.repoUrl} target="_blank" rel="noopener noreferrer" className="nav-link">
+                            GitHub →
+                        </a>
+                    )}
+                </div>
+            </article>
+
             <footer className="site-footer">
                 <p className="footer-text">
                     Built with <span className="footer-heart">♥</span> at Node Zero, Joinville, SC, Brazil

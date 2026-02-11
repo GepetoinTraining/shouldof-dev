@@ -75,9 +75,15 @@ export default function ForceGraph({ data }: { data: GraphData }) {
         // Create a group for zoom/pan
         const g = svg.append('g');
 
-        // Zoom behavior
+        // Zoom behavior — disable wheel zoom so page scrolls normally
+        // Graph is a backdrop; only drag-pan is allowed
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.3, 4])
+            .filter((event) => {
+                // Block wheel events (scroll) from triggering zoom
+                if (event.type === 'wheel') return false;
+                return true;
+            })
             .on('zoom', (event) => {
                 g.attr('transform', event.transform);
             });
@@ -287,8 +293,8 @@ export default function ForceGraph({ data }: { data: GraphData }) {
     }, []);
 
     return (
-        <div className="graph-container">
-            <svg ref={svgRef} />
+        <div className="graph-container" style={{ pointerEvents: 'none' }}>
+            <svg ref={svgRef} style={{ pointerEvents: 'auto' }} />
             <div ref={tooltipRef} className="graph-tooltip" />
         </div>
     );
