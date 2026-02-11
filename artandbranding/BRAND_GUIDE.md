@@ -1,5 +1,18 @@
 # shouldof.dev — Brand Guide
 
+## The Name
+
+Two domains. One truth. Two readings.
+
+**shouldof.dev** → "Should've." We should have said thank you. We should have known their names. We should have credited the people behind every `npm install`. Three syllables of collective guilt that converts to action.
+
+**shoulderof.dev** → Standing on the shoulders of giants. The dependency graph as physical metaphor — every package you use is a shoulder you're standing on, connected to another shoulder, connected to another.
+
+The guilt and the gratitude. The silence and the recognition. Both are the same truth from different angles.
+
+`shouldof.dev` is the primary domain. It carries the emotional hit.
+`shoulderof.dev` redirects to it. The shoulder metaphor lives in the visual identity — the favicon, the arc, the graph.
+
 ## The Mark
 
 A person (green dot) standing at the apex of a shoulder (purple arc), connected by thin lines to dependency nodes along the arc. It reads as:
@@ -37,17 +50,20 @@ The green dot matches the Node Zero center node on the live graph. The purple ma
 
 ## Typography
 
-**Headings**: Use the same font family already on the site. Keep it clean and legible.
-**Body**: System font stack or whatever Mantine provides — this isn't a fashion brand, it's a gratitude engine. Readability > personality.
+**Headings**: Clean and legible. This isn't a fashion brand, it's a gratitude engine.
+**Body**: System font stack or whatever Mantine provides. Readability > personality.
 **The hero text** "Every npm install is a person." should be the boldest, largest element on any page.
+
+**Secondary tagline**: "We should have said thank you." — use sparingly. It hits hardest when it appears once, not repeated.
 
 ## Voice
 
 - Direct. Not corporate.
 - Warm. Not sentimental.
 - Names matter. Always use real names, real places, real stories.
-- Never say "open source community" when you can say "Andrii in Ukraine" or "Glauber in Brazil"
+- Never say "open source community" when you can say "Andrii in Ukraine" or "Glauber in Brazil."
 - The tone is: "Here's a person. Here's what they did. Here's a button to say thank you."
+- The implicit question behind every page: "You should have known this. Now you do."
 
 ## Favicon Files
 
@@ -94,8 +110,18 @@ For X/Twitter cards and OpenGraph:
 - shouldof.dev in bottom corner
 - 1200x630px
 
+## Domain Configuration
+
+| Domain | Role |
+|--------|------|
+| `shouldof.dev` | Primary. All links, social, branding point here. |
+| `shoulderof.dev` | Redirect → shouldof.dev. Secondary/memorable. |
+
+Both registered. Both resolve. One carries the guilt, the other carries the metaphor. The favicon bridges them — a shoulder arc that reminds you what you should have done.
+
 ## What The Brand Is NOT
 
 - Not flashy. Not startup-y. Not "disrupting" anything.
 - No gradients-on-white. No rounded-everything. No AI slop.
 - This is a hall of honor. The brand should feel like entering a quiet, well-lit room where names are written on walls.
+- The name isn't clever wordplay. It's an honest admission.

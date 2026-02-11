@@ -140,8 +140,9 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
             .attr('class', 'link-line')
             .attr('stroke-opacity', 0.4);
 
-        // Draw nodes
+        // Draw nodes — using .node-circle class for targeted selection
         const node = g.append('g')
+            .attr('class', 'nodes-group')
             .selectAll<SVGCircleElement, GraphNode>('circle')
             .data(nodes)
             .join('circle')
@@ -151,14 +152,16 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
             .attr('stroke', (d) => d.hasWiki ? 'rgba(255,255,255,0.3)' : 'none')
             .attr('stroke-width', 1.5)
             .style('filter', 'url(#glow)')
+            .style('cursor', 'pointer')
             .style('opacity', 0)
             .transition()
             .duration(800)
             .delay((_d, i) => i * 30)
             .style('opacity', 1);
 
-        // Labels
+        // Labels — non-selectable, but NOT interactive (nodes handle clicks)
         const label = g.append('g')
+            .attr('class', 'labels-group')
             .selectAll<SVGTextElement, GraphNode>('text')
             .data(nodes)
             .join('text')
@@ -169,27 +172,18 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
             .attr('dy', (d) => getNodeRadius(d) + 14)
             .style('user-select', 'none')
             .style('-webkit-user-select', 'none')
-            .style('pointer-events', 'auto')
-            .style('cursor', 'pointer')
+            .style('pointer-events', 'none')  // Labels DON'T intercept — nodes handle it
             .style('opacity', 0)
             .transition()
             .duration(800)
             .delay((_d, i) => i * 30 + 400)
             .style('opacity', 1);
 
-        // Invisible hit areas — bigger click targets around each node
-        const hitArea = g.append('g')
-            .selectAll<SVGCircleElement, GraphNode>('circle')
-            .data(nodes)
-            .join('circle')
-            .attr('r', (d) => getNodeRadius(d) + 8)
-            .attr('fill', 'transparent')
-            .style('cursor', 'pointer');
+        // ─── Node interactions ───────────────────────────────
+        // Select ONLY .node-circle elements (not any other circles)
+        const nodeCircles = g.selectAll<SVGCircleElement, GraphNode>('.node-circle');
 
-        // Tooltip & interaction
-        const nodeSelection = g.selectAll<SVGCircleElement, GraphNode>('circle');
-
-        nodeSelection
+        nodeCircles
             .on('mouseover', function (_event: MouseEvent, d: GraphNode) {
                 const tooltip = tooltipRef.current;
                 if (!tooltip) return;
@@ -249,51 +243,7 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
                 }
             });
 
-        // Labels also trigger click
-        const labelSelection = g.selectAll<SVGTextElement, GraphNode>('text');
-        labelSelection
-            .on('click', function (_event: MouseEvent, d: GraphNode) {
-                if (onNodeClickRef.current) {
-                    onNodeClickRef.current(d);
-                } else if (d.hasWiki) {
-                    router.push(`/wiki/${d.slug}`);
-                }
-            });
-
-        // Hit areas trigger same events
-        hitArea
-            .on('mouseover', function (_event: MouseEvent, d: GraphNode) {
-                // Find corresponding circle and enlarge it
-                node.filter((n: GraphNode) => n.id === d.id)
-                    .transition().duration(150)
-                    .attr('r', getNodeRadius(d) * 1.3);
-                link
-                    .classed('highlighted', (l) => {
-                        const src = typeof l.source === 'object' ? l.source.id : l.source;
-                        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
-                        return src === d.id || tgt === d.id;
-                    })
-                    .attr('stroke-opacity', (l) => {
-                        const src = typeof l.source === 'object' ? l.source.id : l.source;
-                        const tgt = typeof l.target === 'object' ? l.target.id : l.target;
-                        return (src === d.id || tgt === d.id) ? 0.8 : 0.15;
-                    });
-            })
-            .on('mouseout', function (_event: MouseEvent, d: GraphNode) {
-                node.filter((n: GraphNode) => n.id === d.id)
-                    .transition().duration(150)
-                    .attr('r', getNodeRadius(d));
-                link.classed('highlighted', false).attr('stroke-opacity', 0.4);
-            })
-            .on('click', function (_event: MouseEvent, d: GraphNode) {
-                if (onNodeClickRef.current) {
-                    onNodeClickRef.current(d);
-                } else if (d.hasWiki) {
-                    router.push(`/wiki/${d.slug}`);
-                }
-            });
-
-        // Drag behavior
+        // Drag behavior — on node circles ONLY
         const drag = d3.drag<SVGCircleElement, GraphNode>()
             .on('start', (event, d) => {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -310,9 +260,9 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
                 d.fy = null;
             });
 
-        g.selectAll<SVGCircleElement, GraphNode>('circle').call(drag);
+        nodeCircles.call(drag);
 
-        // Tick
+        // Tick — update positions
         simulation.on('tick', () => {
             link
                 .attr('x1', (d) => (d.source as GraphNode).x!)
@@ -320,11 +270,11 @@ export default function ForceGraph({ data, interactive = false, onNodeClick }: {
                 .attr('x2', (d) => (d.target as GraphNode).x!)
                 .attr('y2', (d) => (d.target as GraphNode).y!);
 
-            g.selectAll<SVGCircleElement, GraphNode>('circle')
+            g.selectAll<SVGCircleElement, GraphNode>('.node-circle')
                 .attr('cx', (d) => d.x!)
                 .attr('cy', (d) => d.y!);
 
-            g.selectAll<SVGTextElement, GraphNode>('text')
+            g.selectAll<SVGTextElement, GraphNode>('.node-label')
                 .attr('x', (d) => d.x!)
                 .attr('y', (d) => d.y!);
         });

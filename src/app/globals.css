@@ -1,20 +1,24 @@
 /* ─── Global Reset & Base ────────────────────────────── */
 
 :root {
-  --bg-deep: #0a0a1a;
-  --bg-surface: #12122a;
-  --bg-card: #1a1a3e;
+  /* Brand Guide: shouldof.dev */
+  --bg-deep: #0f0a1a;
+  --bg-surface: #1a1225;
+  --bg-card: #241a33;
   --accent-violet: #7c3aed;
   --accent-violet-light: #a78bfa;
+  --accent-violet-deep: #6d28d9;
+  --accent-green: #4ade80;
   --accent-cyan: #06b6d4;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
   --accent-emerald: #10b981;
-  --text-primary: #e4e4f0;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #e2e0e8;
+  --text-secondary: #9890a8;
+  --text-muted: #6b6280;
   --glow-violet: rgba(124, 58, 237, 0.3);
-  --glow-cyan: rgba(6, 182, 212, 0.2);
+  --glow-green: rgba(74, 222, 128, 0.2);
+  --warmth-gradient: linear-gradient(135deg, #4ade80, #a78bfa);
 }
 
 * {
@@ -139,22 +143,14 @@ body {
 /* ─── Hero Overlay ───────────────────────────────────── */
 
 .hero-overlay {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 10;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center,
-      transparent 30%,
-      rgba(10, 10, 26, 0.7) 70%,
-      rgba(10, 10, 26, 0.95) 100%);
-}
-
-.hero-overlay>* {
-  pointer-events: auto;
+  min-height: 80vh;
+  padding: 80px 20px 40px;
+  position: relative;
+  z-index: 1;
 }
 
 .hero-tagline {
@@ -163,7 +159,7 @@ body {
   text-align: center;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #e4e4f0 0%, #a78bfa 50%, #06b6d4 100%);
+  background: var(--warmth-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -214,17 +210,20 @@ body {
 /* ─── Stats Bar ──────────────────────────────────────── */
 
 .stats-bar {
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
   display: flex;
+  justify-content: center;
   gap: 40px;
-  padding: 16px 32px;
+  padding: 24px 32px;
+  margin: 0 auto;
+  max-width: 400px;
   background: rgba(26, 26, 62, 0.6);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(124, 58, 237, 0.15);
   border-radius: 16px;
+  position: relative;
+  z-index: 1;
+  margin-top: -40px;
+  margin-bottom: 40px;
 }
 
 .stat-item {
@@ -234,7 +233,7 @@ body {
 .stat-value {
   font-size: 24px;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent-violet-light), var(--accent-cyan));
+  background: var(--warmth-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -474,6 +473,16 @@ body {
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes graphFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
