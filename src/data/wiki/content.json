@@ -1,0 +1,53 @@
+{
+  "markdown": {
+    "packageName": ".md — Markdown",
+    "title": "John Gruber & Aaron Swartz",
+    "subtitle": "The format everything is written in",
+    "location": "Philadelphia, PA / Chicago, IL",
+    "sections": {
+      "who": "John Gruber is a writer and tech blogger from Philadelphia who wanted a way to write for the web without drowning in HTML tags. Aaron Swartz was a prodigy from Chicago who co-created RSS at 14, helped build Reddit, co-founded Creative Commons, and believed fiercely that information should be free.",
+      "the_moment": "In 2004, Gruber was frustrated that writing for the web meant writing *code*, not *prose*. He wanted plain text that looked readable even before rendering. Aaron Swartz, then 17, helped him design the spec — a teenager and a blogger collaborating on what would become the most widely used text format on the internet.",
+      "what_it_does": "Markdown lets you write plain text that converts to formatted HTML. A line starting with # becomes a heading. Text between *asterisks* becomes italic. It's so intuitive that millions of people use it without knowing its name — every GitHub README, every Discord message with bold text, every Notion page.",
+      "impact": "Markdown is used in virtually every developer tool on earth. GitHub processes billions of Markdown files. Slack, Discord, Notion, Obsidian, Reddit — all use Markdown or dialects of it. Every wiki page on this platform is written in it.",
+      "connections": "Markdown is the foundation beneath everything you're reading right now. This wiki page, every README on GitHub, every documentation site. It connects to every single package in this graph indirectly — because every package has a README.md.",
+      "special_note": "Aaron Swartz was prosecuted by the U.S. government for downloading academic papers from JSTOR — papers he believed should be free and accessible to everyone. He died on January 11, 2013, at age 26. He was right about information wanting to be free. He was right about a lot of things."
+    },
+    "links": [
+      { "label": "Aaron Swartz Day", "url": "https://www.aaronswartzday.org" },
+      { "label": "Creative Commons", "url": "https://creativecommons.org" },
+      { "label": "Gruber's Original Spec", "url": "https://daringfireball.net/projects/markdown/" }
+    ],
+    "no_donate_button": true,
+    "donate_alternative": "Aaron's gift gives differently. Instead of a donation button, we link to what he helped build — and what he fought for.",
+    "stats": {
+      "created": "2004",
+      "users": "Billions",
+      "github_files": "Incalculable",
+      "file_extension": ".md"
+    }
+  },
+  "mermaid": {
+    "packageName": "mermaid — Mermaid.js",
+    "title": "Knut Sveidqvist",
+    "subtitle": "Diagrams from text, like Markdown for visuals",
+    "location": "Sweden",
+    "sections": {
+      "who": "Knut Sveidqvist is a Swedish developer who believed that creating diagrams shouldn't require expensive software or design skills. He built Mermaid.js — a tool that generates diagrams from simple text descriptions, the way Markdown generates formatted text from plain characters.",
+      "the_moment": "Knut was tired of switching between code editors and diagramming tools. Every time he needed a flowchart or sequence diagram, it meant opening a separate application, dragging boxes around, exporting images, and embedding them. He thought: what if diagrams could live inside the same Markdown files as everything else?",
+      "what_it_does": "Mermaid.js turns plain text into beautiful diagrams — flowcharts, sequence diagrams, Gantt charts, entity-relationship diagrams, and more. You write text like 'A --> B' and it renders an arrow from A to B. It runs entirely in the browser with zero cost, zero servers, zero subscriptions.",
+      "impact": "74,000 GitHub stars. Over 8 million estimated users. GitHub natively renders Mermaid diagrams in Markdown files. It's embedded in Notion, GitLab, Obsidian, and dozens of other tools. And yet — Knut Sveidqvist has 3 followers on Medium.",
+      "connections": "Mermaid.js is why this project exists. During the conversation that sparked Gratitude Graph, Pedro discovered Mermaid while building Node Zero and realized: the open source ecosystem has no mechanism for gratitude. Knut's tool was the lens that made the invisible visible."
+    },
+    "links": [
+      { "label": "Mermaid.js on GitHub", "url": "https://github.com/mermaid-js/mermaid" },
+      { "label": "Mermaid Live Editor", "url": "https://mermaid.live" }
+    ],
+    "no_donate_button": false,
+    "stats": {
+      "created": "2014",
+      "github_stars": "74K+",
+      "weekly_downloads": "3M+",
+      "users": "8M+"
+    }
+  }
+}
