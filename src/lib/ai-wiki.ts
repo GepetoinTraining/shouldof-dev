@@ -161,7 +161,9 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     "impact": "Real numbers (use exact counts, don't round) + the recognition gap. 2-3 sentences.",
     "connections": "What depends on this. What breaks without it. The invisible web. 1-2 sentences."
   }
-}`;
+}
+
+CRITICAL: Do NOT include citation markup like <cite> tags. Weave facts naturally into your prose. Your text must stand on its own — no footnotes, no references, no markup.`;
 
     const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
@@ -189,8 +191,11 @@ Return ONLY valid JSON (no markdown fences, no explanation):
     // Sonnet pricing: $3/M input, $15/M output + web search overhead
     const costUsd = (tokensIn * 3 / 1_000_000) + (tokensOut * 15 / 1_000_000);
 
-    // Parse the JSON response — handle potential markdown fences
+    // Parse the JSON response — handle potential markdown fences and strip citations
     let jsonStr = text.trim();
+    // Strip <cite> tags from Claude's web search responses
+    jsonStr = jsonStr.replace(/<cite[^>]*>[\s\S]*?<\/cite>/g, '');
+    jsonStr = jsonStr.replace(/<cite[^>]*\/>/g, '');
     if (jsonStr.startsWith('```')) {
         jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }

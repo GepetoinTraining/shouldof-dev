@@ -9,6 +9,15 @@ import { packages } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { isAdmin } from '@/lib/admin';
 
+/** Strip <cite> tags from AI-generated wiki text (leftover from web search responses) */
+function stripCitations(text: string | undefined | null): string {
+    if (!text) return '';
+    return text
+        .replace(/<cite[^>]*>[\s\S]*?<\/cite>/g, '')
+        .replace(/<cite[^>]*\/>/g, '')
+        .trim();
+}
+
 const staticWiki = wikiContent as Record<string, any>;
 
 interface PageProps {
@@ -206,35 +215,35 @@ function renderWikiPage(data: WikiPageData) {
                 {data.sections.who && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title">Who</h2>
-                        <div className="wiki-body"><p>{data.sections.who}</p></div>
+                        <div className="wiki-body"><p>{stripCitations(data.sections.who)}</p></div>
                     </section>
                 )}
 
                 {data.sections.the_moment && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title">The Moment</h2>
-                        <div className="wiki-body"><p>{data.sections.the_moment}</p></div>
+                        <div className="wiki-body"><p>{stripCitations(data.sections.the_moment)}</p></div>
                     </section>
                 )}
 
                 {data.sections.what_it_does && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title">What It Does</h2>
-                        <div className="wiki-body"><p>{data.sections.what_it_does}</p></div>
+                        <div className="wiki-body"><p>{stripCitations(data.sections.what_it_does)}</p></div>
                     </section>
                 )}
 
                 {data.sections.impact && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title">Impact</h2>
-                        <div className="wiki-body"><p>{data.sections.impact}</p></div>
+                        <div className="wiki-body"><p>{stripCitations(data.sections.impact)}</p></div>
                     </section>
                 )}
 
                 {data.sections.connections && (
                     <section className="wiki-section">
                         <h2 className="wiki-section-title">Connections</h2>
-                        <div className="wiki-body"><p>{data.sections.connections}</p></div>
+                        <div className="wiki-body"><p>{stripCitations(data.sections.connections)}</p></div>
                     </section>
                 )}
 
